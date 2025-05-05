@@ -14,6 +14,7 @@ import {
     FaLock
 } from 'react-icons/fa';
 import { MdAttachMoney } from 'react-icons/md';
+import CreditList from './CreditList';
 
 export default function DesktopHomePage() {
     const [rates, setRates] = useState({
@@ -24,14 +25,13 @@ export default function DesktopHomePage() {
 
     const [activeSection, setActiveSection] = useState('home');
     const [showPersonalForm, setShowPersonalForm] = useState(false);
-
+    const [credits, setCredits] = useState([]);
     const [formData, setFormData] = useState({
         person_age: '',
         person_income: '',
         person_home_ownership: '',
         person_emp_length: ''
     });
-
     const [hasData, setHasData] = useState(false);
     const [isEditable, setIsEditable] = useState(true);
 
@@ -50,34 +50,31 @@ export default function DesktopHomePage() {
     }, []);
 
     useEffect(() => {
-        console.log('🔄 useEffect сработал: activeSection =', activeSection, 'showPersonalForm =', showPersonalForm);
         if (activeSection === 'settings' && showPersonalForm) {
             const token = localStorage.getItem('token');
             if (token) {
                 axios.get('/api/personal-data/', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
-                .then((response) => {
-                    console.log('✅ Персональные данные загружены', response.data);
-                    setFormData(response.data);
-                    setHasData(true);
-                    setIsEditable(false);
-                })
-                .catch((error) => {
-                    if (error.response && error.response.status === 404) {
-                        console.log('ℹ️ Данные не найдены (404)');
-                        setFormData({
-                            person_age: '',
-                            person_income: '',
-                            person_home_ownership: '',
-                            person_emp_length: ''
-                        });
-                        setHasData(false);
-                        setIsEditable(true);
-                    } else {
-                        console.error('Ошибка при загрузке персональных данных:', error);
-                    }
-                });
+                    .then((response) => {
+                        setFormData(response.data);
+                        setHasData(true);
+                        setIsEditable(false);
+                    })
+                    .catch((error) => {
+                        if (error.response && error.response.status === 404) {
+                            setFormData({
+                                person_age: '',
+                                person_income: '',
+                                person_home_ownership: '',
+                                person_emp_length: ''
+                            });
+                            setHasData(false);
+                            setIsEditable(true);
+                        } else {
+                            console.error('Ошибка при загрузке персональных данных:', error);
+                        }
+                    });
             }
         }
     }, [activeSection, showPersonalForm]);
@@ -91,8 +88,6 @@ export default function DesktopHomePage() {
     };
 
     const handleSubmit = async () => {
-        console.log('🟢 handleSubmit вызван (отправка данных на сервер)');
-
         try {
             const token = localStorage.getItem('token');
             if (!token) {
@@ -106,7 +101,6 @@ export default function DesktopHomePage() {
                 }
             });
 
-            console.log('✅ Ответ сервера:', response.data);
             alert('Данные успешно сохранены!');
             setShowPersonalForm(false);
         } catch (error) {
@@ -115,15 +109,44 @@ export default function DesktopHomePage() {
         }
     };
 
+    // Обработчик кнопки "Получить кредит"
+ const handleGetCredit = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Ошибка: токен не найден. Пожалуйста, войдите заново.');
+            return;
+        }
+
+        const personalResponse = await axios.get('/api/personal-data/', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const personalData = personalResponse.data;
+
+        const creditResponse = await axios.post('/api/find-credits/?filter_type=BEST', personalData, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+
+        if (creditResponse.data && creditResponse.data.credits) {
+            setCredits(creditResponse.data.credits);
+            setActiveSection('credits');  // Переключаем на список кредитов
+        } else {
+            alert('Кредиты не найдены.');
+        }
+    } catch (error) {
+        console.error('Ошибка при получении кредитов:', error.response?.data || error.message);
+        alert('Ошибка при получении кредитов.');
+    }
+};
+
     return (
         <div className="flex min-h-screen bg-gray-50 relative">
             <aside className="w-64 bg-white shadow-lg p-4">
                 <h2 className="text-xl font-bold mb-6">Панель</h2>
                 <nav className="space-y-4">
                     <div
-                        className={`flex items-center space-x-2 cursor-pointer ${
-                            activeSection === 'home' ? 'text-green-600' : 'text-gray-600 hover:text-green-600'
-                        }`}
+                        className={`flex items-center space-x-2 cursor-pointer ${activeSection === 'home' ? 'text-green-600' : 'text-gray-600 hover:text-green-600'}`}
                         onClick={() => {
                             setActiveSection('home');
                             setShowPersonalForm(false);
@@ -133,9 +156,7 @@ export default function DesktopHomePage() {
                         <span>Главная</span>
                     </div>
                     <div
-                        className={`flex items-center space-x-2 cursor-pointer ${
-                            activeSection === 'chat' ? 'text-green-600' : 'text-gray-600 hover:text-green-600'
-                        }`}
+                        className={`flex items-center space-x-2 cursor-pointer ${activeSection === 'chat' ? 'text-green-600' : 'text-gray-600 hover:text-green-600'}`}
                         onClick={() => {
                             setActiveSection('chat');
                             setShowPersonalForm(false);
@@ -145,9 +166,7 @@ export default function DesktopHomePage() {
                         <span>Чат</span>
                     </div>
                     <div
-                        className={`flex items-center space-x-2 cursor-pointer ${
-                            activeSection === 'settings' ? 'text-green-600' : 'text-gray-600 hover:text-green-600'
-                        }`}
+                        className={`flex items-center space-x-2 cursor-pointer ${activeSection === 'settings' ? 'text-green-600' : 'text-gray-600 hover:text-green-600'}`}
                         onClick={() => {
                             setActiveSection('settings');
                             setShowPersonalForm(false);
@@ -203,7 +222,12 @@ export default function DesktopHomePage() {
                                 </div>
                                 <div className="flex flex-col items-center text-sm">
                                     <MdAttachMoney className="text-green-600 w-6 h-6 mb-1" />
-                                    <span>Получить кредит</span>
+                                    <span
+                                        onClick={handleGetCredit}
+                                        className="cursor-pointer bg-gray-100 rounded-lg p-2 transition-colors duration-300 hover:bg-green-200 hover:text-green-800"
+                                    >
+                                        Получить кредит
+                                    </span>
                                 </div>
                                 <div className="flex flex-col items-center text-sm">
                                     <FaPiggyBank className="text-green-600 w-6 h-6 mb-1" />
@@ -216,6 +240,10 @@ export default function DesktopHomePage() {
                             </div>
                         </div>
                     </>
+                )}
+
+                {activeSection === 'credits' && (
+                    <CreditList credits={credits} />
                 )}
 
                 {activeSection === 'chat' && (
@@ -232,10 +260,7 @@ export default function DesktopHomePage() {
                             <ul className="divide-y">
                                 <li
                                     className="py-3 flex items-center cursor-pointer hover:bg-gray-50"
-                                    onClick={() => {
-                                        console.log('🔵 Клик по "Личные данные"');
-                                        setShowPersonalForm(true);
-                                    }}
+                                    onClick={() => setShowPersonalForm(true)}
                                 >
                                     <FaUser className="w-5 h-5 text-gray-500 mr-3" />
                                     Личные данные
@@ -312,10 +337,7 @@ export default function DesktopHomePage() {
                                         <button
                                             type="button"
                                             className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
-                                            onClick={() => {
-                                                console.log('🟡 Кнопка "Изменить" нажата');
-                                                setIsEditable(true);
-                                            }}
+                                            onClick={() => setIsEditable(true)}
                                         >
                                             Изменить
                                         </button>
@@ -324,20 +346,14 @@ export default function DesktopHomePage() {
                                             <button
                                                 type="button"
                                                 className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                                                onClick={() => {
-                                                    console.log('🟠 Кнопка "Сохранить" нажата');
-                                                    handleSubmit();
-                                                }}
+                                                onClick={handleSubmit}
                                             >
                                                 Сохранить
                                             </button>
                                             <button
                                                 type="button"
                                                 className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-                                                onClick={() => {
-                                                    console.log('🔙 Кнопка "Назад" нажата');
-                                                    setShowPersonalForm(false);
-                                                }}
+                                                onClick={() => setShowPersonalForm(false)}
                                             >
                                                 Назад
                                             </button>

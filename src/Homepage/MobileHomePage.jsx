@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fa';
 import { MdAttachMoney } from 'react-icons/md';
 import axios from 'axios';
+import CreditList from './CreditList';
 
 export default function MobileHomePage() {
     const [rates, setRates] = useState({
@@ -24,14 +25,16 @@ export default function MobileHomePage() {
     });
 
     const [activeSection, setActiveSection] = useState('home');
+    const [credits, setCredits] = useState([]);
     const [showPersonalForm, setShowPersonalForm] = useState(false);
-
     const [formData, setFormData] = useState({
         person_age: '',
         person_income: '',
         person_home_ownership: '',
         person_emp_length: ''
     });
+    const [hasData, setHasData] = useState(false);
+    const [isEditable, setIsEditable] = useState(true);
 
     useEffect(() => {
         axios.get('/api/currency-rates/')
@@ -47,17 +50,37 @@ export default function MobileHomePage() {
             });
     }, []);
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value
-        }));
-    };
+    useEffect(() => {
+        if (activeSection === 'settings' && showPersonalForm) {
+            const token = localStorage.getItem('token');
+            if (token) {
+                axios.get('/api/personal-data/', {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+                    .then((response) => {
+                        setFormData(response.data);
+                        setHasData(true);
+                        setIsEditable(false);
+                    })
+                    .catch((error) => {
+                        if (error.response && error.response.status === 404) {
+                            setFormData({
+                                person_age: '',
+                                person_income: '',
+                                person_home_ownership: '',
+                                person_emp_length: ''
+                            });
+                            setHasData(false);
+                            setIsEditable(true);
+                        } else {
+                            console.error('Ошибка при загрузке персональных данных:', error);
+                        }
+                    });
+            }
+        }
+    }, [activeSection, showPersonalForm]);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
+    const handleGetCredit = async () => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
@@ -65,13 +88,46 @@ export default function MobileHomePage() {
                 return;
             }
 
-            const response = await axios.post('/api/personal-data/', formData, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+            const personalResponse = await axios.get('/api/personal-data/', {
+                headers: { Authorization: `Bearer ${token}` }
             });
 
-            console.log('Ответ сервера:', response.data);
+            const personalData = personalResponse.data;
+
+            const creditResponse = await axios.post('/api/find-credits/?filter_type=BEST', personalData, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (creditResponse.data && creditResponse.data.credits) {
+                setCredits(creditResponse.data.credits);
+                setActiveSection('credits');
+            } else {
+                alert('Кредиты не найдены.');
+            }
+        } catch (error) {
+            console.error('Ошибка при получении кредитов:', error.response?.data || error.message);
+            alert('Ошибка при получении кредитов.');
+        }
+    };
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Ошибка: токен не найден. Пожалуйста, войдите заново.');
+                return;
+            }
+
+            await axios.post('/api/personal-data/', formData, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
             alert('Данные успешно сохранены!');
             setShowPersonalForm(false);
         } catch (error) {
@@ -83,7 +139,8 @@ export default function MobileHomePage() {
     const sectionTitles = {
         home: 'Главная',
         chat: 'Чат',
-        settings: 'Настройки'
+        settings: 'Настройки',
+        credits: 'Доступные кредиты'
     };
 
     return (
@@ -91,7 +148,12 @@ export default function MobileHomePage() {
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center space-x-2">
                     <FaUserCircle className="text-green-600 w-6 h-6" />
-                    <h1 className="text-lg font-semibold">{sectionTitles[activeSection]}</h1>
+                    <h1 className="text-lg font-semibold">
+                        {activeSection === 'home' && 'Главная'}
+                        {activeSection === 'credits' && 'Доступные кредиты'}
+                        {activeSection === 'chat' && 'Чат'}
+                        {activeSection === 'settings' && 'Настройки'}
+                    </h1>
                 </div>
                 <FaBell className="text-green-600 w-6 h-6" />
             </div>
@@ -114,7 +176,10 @@ export default function MobileHomePage() {
                             <FaMoneyBill className="w-6 h-6 text-green-600 mb-1" />
                             <span>Пополнение</span>
                         </div>
-                        <div className="flex flex-col items-center text-xs">
+                        <div
+                            className="flex flex-col items-center text-xs cursor-pointer"
+                            onClick={handleGetCredit}
+                        >
                             <MdAttachMoney className="w-6 h-6 text-green-600 mb-1" />
                             <span>Получить кредит</span>
                         </div>
@@ -159,6 +224,8 @@ export default function MobileHomePage() {
                 </>
             )}
 
+            {activeSection === 'credits' && <CreditList credits={credits} />}
+
             {activeSection === 'chat' && (
                 <div className="bg-white rounded-lg p-4">
                     <h2 className="text-lg font-semibold mb-4">Чат</h2>
@@ -199,6 +266,7 @@ export default function MobileHomePage() {
                                     className="w-full border border-gray-300 rounded px-3 py-2"
                                     placeholder="Введите возраст"
                                     required
+                                    disabled={!isEditable}
                                 />
                             </div>
                             <div>
@@ -211,6 +279,7 @@ export default function MobileHomePage() {
                                     className="w-full border border-gray-300 rounded px-3 py-2"
                                     placeholder="Введите доход"
                                     required
+                                    disabled={!isEditable}
                                 />
                             </div>
                             <div>
@@ -221,6 +290,7 @@ export default function MobileHomePage() {
                                     onChange={handleInputChange}
                                     className="w-full border border-gray-300 rounded px-3 py-2"
                                     required
+                                    disabled={!isEditable}
                                 >
                                     <option value="">Выберите</option>
                                     <option value="RENT">RENT — арендует жильё</option>
@@ -239,22 +309,35 @@ export default function MobileHomePage() {
                                     className="w-full border border-gray-300 rounded px-3 py-2"
                                     placeholder="Введите стаж"
                                     required
+                                    disabled={!isEditable}
                                 />
                             </div>
                             <div className="flex space-x-2">
-                                <button
-                                    type="submit"
-                                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                                >
-                                    Сохранить
-                                </button>
-                                <button
-                                    type="button"
-                                    className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-                                    onClick={() => setShowPersonalForm(false)}
-                                >
-                                    Назад
-                                </button>
+                                {!isEditable ? (
+                                    <button
+                                        type="button"
+                                        className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+                                        onClick={() => setIsEditable(true)}
+                                    >
+                                        Изменить
+                                    </button>
+                                ) : (
+                                    <>
+                                        <button
+                                            type="submit"
+                                            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                                        >
+                                            Сохранить
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
+                                            onClick={() => setShowPersonalForm(false)}
+                                        >
+                                            Назад
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </form>
                     )}
@@ -284,7 +367,10 @@ export default function MobileHomePage() {
                     className={`flex flex-col items-center text-xs cursor-pointer ${
                         activeSection === 'settings' ? 'text-green-600' : 'text-gray-400'
                     }`}
-                    onClick={() => setActiveSection('settings')}
+                    onClick={() => {
+                        setActiveSection('settings');
+                        setShowPersonalForm(false);
+                    }}
                 >
                     <FaCog className="w-5 h-5" />
                     <span>Настройки</span>
