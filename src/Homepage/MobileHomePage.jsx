@@ -115,8 +115,7 @@ export default function MobileHomePage() {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
@@ -324,8 +323,9 @@ export default function MobileHomePage() {
                                 ) : (
                                     <>
                                         <button
-                                            type="submit"
+                                            type="button"
                                             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                                            onClick={handleSubmit}
                                         >
                                             Сохранить
                                         </button>
