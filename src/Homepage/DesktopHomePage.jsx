@@ -34,6 +34,7 @@ export default function DesktopHomePage() {
     });
     const [hasData, setHasData] = useState(false);
     const [isEditable, setIsEditable] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);  // добавлено состояние загрузки
 
     useEffect(() => {
         axios.get('/api/currency-rates/')
@@ -109,36 +110,41 @@ export default function DesktopHomePage() {
         }
     };
 
-    // Обработчик кнопки "Получить кредит"
- const handleGetCredit = async () => {
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Ошибка: токен не найден. Пожалуйста, войдите заново.');
-            return;
+    // Обработчик кнопки "Получить кредит" с загрузкой
+    const handleGetCredit = async () => {
+        try {
+            setIsLoading(true);  // Показать загрузку
+
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Ошибка: токен не найден. Пожалуйста, войдите заново.');
+                setIsLoading(false);
+                return;
+            }
+
+            const personalResponse = await axios.get('/api/personal-data/', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            const personalData = personalResponse.data;
+
+            const creditResponse = await axios.post('/api/find-credits/?filter_type=BEST', personalData, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+
+            if (creditResponse.data && creditResponse.data.credits) {
+                setCredits(creditResponse.data.credits);
+                setActiveSection('credits');  // Переключаем на список кредитов
+            } else {
+                alert('Кредиты не найдены.');
+            }
+        } catch (error) {
+            console.error('Ошибка при получении кредитов:', error.response?.data || error.message);
+            alert('Ошибка при получении кредитов.');
+        } finally {
+            setIsLoading(false);  // Скрыть загрузку
         }
-
-        const personalResponse = await axios.get('/api/personal-data/', {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-
-        const personalData = personalResponse.data;
-
-        const creditResponse = await axios.post('/api/find-credits/?filter_type=BEST', personalData, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-
-        if (creditResponse.data && creditResponse.data.credits) {
-            setCredits(creditResponse.data.credits);
-            setActiveSection('credits');  // Переключаем на список кредитов
-        } else {
-            alert('Кредиты не найдены.');
-        }
-    } catch (error) {
-        console.error('Ошибка при получении кредитов:', error.response?.data || error.message);
-        alert('Ошибка при получении кредитов.');
-    }
-};
+    };
 
     return (
         <div className="flex min-h-screen bg-gray-50 relative">
@@ -179,6 +185,20 @@ export default function DesktopHomePage() {
             </aside>
 
             <main className="flex-1 p-8">
+             {isLoading && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+            <div className="flex space-x-2 justify-center items-center">
+                <div className="h-4 w-4 bg-green-500 rounded-full animate-bounce"></div>
+                <div className="h-4 w-4 bg-green-500 rounded-full animate-bounce [animation-delay:-0.2s]"></div>
+                <div className="h-4 w-4 bg-green-500 rounded-full animate-bounce [animation-delay:-0.4s]"></div>
+            </div>
+            <p className="text-lg font-semibold mt-4">Рассмотрение заявки...</p>
+        </div>
+    </div>
+)}
+
+
                 {activeSection === 'home' && (
                     <>
                         <div className="flex justify-between items-center mb-6">

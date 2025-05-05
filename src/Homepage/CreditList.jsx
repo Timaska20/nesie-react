@@ -24,7 +24,6 @@ export default function CreditList({ credits }) {
                                     <h2 className="text-lg font-semibold">
                                         {intentTranslations[credit.loan_intent] || credit.loan_intent}
                                     </h2>
-                                    <p className="text-sm text-gray-500">Кредитный рейтинг: {credit.loan_grade}</p>
                                 </div>
                                 <span className="text-xl text-green-600 font-bold">
                                     {credit.loan_amnt_kzt.toLocaleString()} ₸
