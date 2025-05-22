@@ -43,23 +43,26 @@ export default function CreditList({ credits }) {
             return;
         }
 
+        // Получаем токен из localStorage
         const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Токен не найден. Пожалуйста, войдите.');
+            return;
+        }
+
         try {
-            const response = await axios.post('/api/explain', {
-                person_age: credit.client_prediction.client_person_age,
-                person_income: credit.client_prediction.client_person_income_usd_annual,
-                person_home_ownership: credit.client_prediction.client_person_home_ownership,
-                person_emp_length: credit.client_prediction.client_person_emp_length,
-                loan_intent: credit.loan_intent,
-                loan_grade: credit.loan_grade,
-                loan_amnt: credit.loan_amnt,
-                loan_int_rate: credit.loan_int_rate !== null ? credit.loan_int_rate : 15.0,
-                loan_percent_income: credit.loan_amnt / credit.client_prediction.client_person_income_usd_annual,
-                cb_person_default_on_file: false,
-                cb_person_cred_hist_length: credit.cb_person_cred_hist_length
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await axios.post(
+                '/api/predict/?explain=true',
+                {
+                    loan_intent: credit.loan_intent,
+                    loan_grade: credit.loan_grade,
+                    loan_amount: credit.loan_amnt,
+                    loan_int_rate: credit.loan_int_rate ?? 15.0,
+                    loan_status: credit.loan_status,
+                    currency: 'KZT'
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
             setExplanations(prev => ({ ...prev, [index]: response.data }));
         } catch (error) {
@@ -107,7 +110,6 @@ export default function CreditList({ credits }) {
                 <p className="font-semibold text-green-700 mb-1">Что повлияло на решение:</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-
                         <p className="text-red-600 font-semibold mb-1">⬆️ {increaseText}</p>
                         <ul className="list-disc pl-5 space-y-1">
                             {positives.map(([key, val], i) => (
