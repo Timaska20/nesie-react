@@ -51,18 +51,18 @@ export default function CreditList({ credits }) {
         }
 
         try {
-            const response = await axios.post(
-                '/api/predict/?explain=true',
-                {
-                    loan_intent: credit.loan_intent,
-                    loan_grade: credit.loan_grade,
-                    loan_amount: credit.loan_amnt,
-                    loan_int_rate: credit.loan_int_rate ?? 15.0,
-                    loan_status: credit.loan_status,
-                    currency: 'KZT'
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+           const response = await axios.post(
+  '/api/predict/?explain=true',
+  {
+      loan_intent: credit.loan_intent,
+      loan_grade: credit.loan_grade,
+      loan_amount: credit.loan_amnt_kzt,  // <-- здесь меняем
+      loan_int_rate: credit.loan_int_rate ?? 15.0,
+      loan_status: credit.loan_status,
+      currency: 'KZT'
+  },
+  { headers: { Authorization: `Bearer ${token}` } }
+);
 
             setExplanations(prev => ({ ...prev, [index]: response.data }));
         } catch (error) {
