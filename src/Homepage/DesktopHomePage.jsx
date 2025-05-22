@@ -24,6 +24,7 @@ export default function DesktopHomePage() {
         usd: { buy: 0, sell: 0 }
     });
     const [credits, setCredits] = useState([]);
+    const [submittedCredits, setSubmittedCredits] = useState([]);
     const [activeSection, setActiveSection] = useState('home');
     const [showPersonalForm, setShowPersonalForm] = useState(false);
     const [formData, setFormData] = useState({
@@ -34,7 +35,7 @@ export default function DesktopHomePage() {
     });
     const [hasData, setHasData] = useState(false);
     const [isEditable, setIsEditable] = useState(true);
-    const [isLoading, setIsLoading] = useState(false);  // добавлено состояние загрузки
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         axios.get('/api/currency-rates/')
@@ -48,6 +49,17 @@ export default function DesktopHomePage() {
             .catch((error) => {
                 console.error('Ошибка загрузки курсов валют', error);
             });
+
+        const token = localStorage.getItem('token');
+        if (token) {
+            axios.get('/api/credits/', {
+                headers: { Authorization: `Bearer ${token}` }
+            }).then(res => {
+                setSubmittedCredits(res.data);
+            }).catch(err => {
+                console.error('Ошибка загрузки заявок:', err);
+            });
+        }
     }, []);
 
     useEffect(() => {
@@ -185,132 +197,137 @@ export default function DesktopHomePage() {
                 </nav>
             </aside>
 
-            <main className="flex-1 p-8">
-             {isLoading && (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-            <div className="flex space-x-2 justify-center items-center">
+      <main className="flex-1 p-8">
+        {isLoading && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+              <div className="flex space-x-2 justify-center items-center">
                 <div className="h-4 w-4 bg-green-500 rounded-full animate-bounce"></div>
                 <div className="h-4 w-4 bg-green-500 rounded-full animate-bounce [animation-delay:-0.2s]"></div>
                 <div className="h-4 w-4 bg-green-500 rounded-full animate-bounce [animation-delay:-0.4s]"></div>
+              </div>
+              <p className="text-lg font-semibold mt-4">Рассмотрение заявки...</p>
             </div>
-            <p className="text-lg font-semibold mt-4">Рассмотрение заявки...</p>
+          </div>
+        )}
+
+
+{activeSection === 'home' && (
+    <>
+        <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold">Главная</h1>
+            <FaBell className="text-green-600 w-6 h-6" />
         </div>
-    </div>
+
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <div className="flex items-center space-x-2 mb-4">
+                <FaUniversity className="text-green-600 w-5 h-5" />
+                <h2 className="text-lg font-semibold">Курсы валют</h2>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+                <div className="p-4 border rounded-lg text-center">
+                    <p className="text-green-600 font-bold text-lg">
+                        € {rates.eur.buy} ₸
+                    </p>
+                    <p className="text-sm text-gray-500">{rates.eur.sell} ₸</p>
+                </div>
+                <div className="p-4 border rounded-lg text-center">
+                    <p className="text-green-600 font-bold text-lg">
+                        ₽ {rates.rub.buy} ₸
+                    </p>
+                    <p className="text-sm text-gray-500">{rates.rub.sell} ₸</p>
+                </div>
+                <div className="p-4 border rounded-lg text-center">
+                    <p className="text-green-600 font-bold text-lg">
+                        $ {rates.usd.buy} ₸
+                    </p>
+                    <p className="text-sm text-gray-500">{rates.usd.sell} ₸</p>
+                </div>
+            </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold mb-4">Быстрые действия</h2>
+            <div className="grid grid-cols-4 gap-4 text-center">
+                <div className="flex flex-col items-center text-sm">
+                    <FaMoneyBill className="text-green-600 w-6 h-6 mb-1" />
+                    <span>Пополнение</span>
+                </div>
+                <div className="flex flex-col items-center text-sm">
+                    <MdAttachMoney className="text-green-600 w-6 h-6 mb-1" />
+                    <span
+                        onClick={handleGetCredit}
+                        className="cursor-pointer bg-gray-100 rounded-lg p-2 transition-colors duration-300 hover:bg-green-200 hover:text-green-800"
+                    >
+                        Получить кредит
+                    </span>
+                </div>
+                <div className="flex flex-col items-center text-sm">
+                    <FaPiggyBank className="text-green-600 w-6 h-6 mb-1" />
+                    <span>Открыть депозит</span>
+                </div>
+                <div className="flex flex-col items-center text-sm">
+                    <FaCreditCard className="text-green-600 w-6 h-6 mb-1" />
+                    <span>Открыть карту</span>
+                </div>
+            </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6 mt-6">
+            <h2 className="text-lg font-semibold mb-4">Продукты</h2>
+            {submittedCredits.length > 0 ? (
+                <div className="space-y-4">
+                    {submittedCredits.map((credit, idx) => (
+                        <div
+                            key={idx}
+                            className="flex items-center space-x-4 p-4 border border-yellow-300 bg-yellow-50 rounded-lg shadow-sm hover:shadow-md transition"
+                        >
+                            <div className="text-yellow-500 text-3xl">📁</div>
+                            <div className="flex-1">
+                                <h3 className="text-md font-semibold text-gray-800 mb-1">Кредит по заявке</h3>
+                                <p className="text-sm text-gray-600">
+                                    <strong>Сумма:</strong> {credit.loan_amount?.toLocaleString()} ₸
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    <strong>Цель:</strong> {credit.loan_intent ?? '—'}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    <strong>Класс:</strong> {credit.loan_grade ?? '—'} | <strong>Ставка:</strong> {credit.interest_rate}%
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-gray-500">Нет активных продуктов</p>
+            )}
+        </div>
+          </>
+        )}
+
+
+{activeSection === 'credits' && (
+    <CreditList
+        credits={credits}
+        onApply={(credit) => {
+            setSelectedCredit(credit);
+            setActiveSection('home');
+        }}
+    />
 )}
 
 
-            {activeSection === 'home' && (
-                <>
-                    <div className="flex justify-between items-center mb-6">
-                        <h1 className="text-2xl font-bold">Главная</h1>
-                        <FaBell className="text-green-600 w-6 h-6" />
-                    </div>
+        {activeSection === 'chat' && (
+          <div>
+            <h1 className="text-2xl font-bold mb-4">Чат</h1>
+            <p>Раздел чата находится в разработке.</p>
+          </div>
+        )}
 
-
-                        <div className="bg-white rounded-lg shadow p-6 mb-6">
-                            <div className="flex items-center space-x-2 mb-4">
-                                <FaUniversity className="text-green-600 w-5 h-5" />
-                                <h2 className="text-lg font-semibold">Курсы валют</h2>
-                            </div>
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="p-4 border rounded-lg text-center">
-                                    <p className="text-green-600 font-bold text-lg">
-                                        € {rates.eur.buy} ₸
-                                    </p>
-                                    <p className="text-sm text-gray-500">{rates.eur.sell} ₸</p>
-                                </div>
-                                <div className="p-4 border rounded-lg text-center">
-                                    <p className="text-green-600 font-bold text-lg">
-                                        ₽ {rates.rub.buy} ₸
-                                    </p>
-                                    <p className="text-sm text-gray-500">{rates.rub.sell} ₸</p>
-                                </div>
-                                <div className="p-4 border rounded-lg text-center">
-                                    <p className="text-green-600 font-bold text-lg">
-                                        $ {rates.usd.buy} ₸
-                                    </p>
-                                    <p className="text-sm text-gray-500">{rates.usd.sell} ₸</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-lg font-semibold mb-4">Быстрые действия</h2>
-                            <div className="grid grid-cols-4 gap-4 text-center">
-                                <div className="flex flex-col items-center text-sm">
-                                    <FaMoneyBill className="text-green-600 w-6 h-6 mb-1" />
-                                    <span>Пополнение</span>
-                                </div>
-                                <div className="flex flex-col items-center text-sm">
-                                    <MdAttachMoney className="text-green-600 w-6 h-6 mb-1" />
-                                    <span
-                                        onClick={handleGetCredit}
-                                        className="cursor-pointer bg-gray-100 rounded-lg p-2 transition-colors duration-300 hover:bg-green-200 hover:text-green-800"
-                                    >
-                                        Получить кредит
-                                    </span>
-                                </div>
-                                <div className="flex flex-col items-center text-sm">
-                                    <FaPiggyBank className="text-green-600 w-6 h-6 mb-1" />
-                                    <span>Открыть депозит</span>
-                                </div>
-                                <div className="flex flex-col items-center text-sm">
-                                    <FaCreditCard className="text-green-600 w-6 h-6 mb-1" />
-                                    <span>Открыть карту</span>
-                                </div>
-                            </div>
-                        </div>
-                    </>
-                )}
-
-<div className="bg-white rounded-lg shadow p-6 mb-6">
-  <h2 className="text-lg font-semibold mb-4">Продукты</h2>
-
-  {selectedCredit ? (
-    <div className="flex items-center space-x-4 p-4 border border-yellow-300 bg-yellow-50 rounded-lg shadow-sm hover:shadow-md transition">
-      <div className="text-yellow-500 text-3xl">
-        📁
-      </div>
-      <div className="flex-1">
-        <h3 className="text-md font-semibold text-gray-800 mb-1">Кредит по заявке</h3>
-        <p className="text-sm text-gray-600">
-          <strong>Сумма:</strong> {selectedCredit.loan_amnt_kzt.toLocaleString()} ₸
-        </p>
-        <p className="text-sm text-gray-600">
-          <strong>Цель:</strong> {selectedCredit.loan_intent}
-        </p>
-        <p className="text-sm text-gray-600">
-          <strong>Класс:</strong> {selectedCredit.loan_grade} | <strong>Ставка:</strong> {selectedCredit.loan_int_rate}%
-        </p>
-      </div>
-    </div>
-  ) : (
-    <p className="text-gray-500">Нет активных продуктов</p>
-  )}
-</div>
-
-            {activeSection === 'credits' && (
-                     <CreditList
-       credits={credits}
-onApply={(credit) => {
-          setSelectedCredit(credit);
-         setActiveSection('home');
-       }}
-     />
-            )}
-
-                {activeSection === 'chat' && (
-                    <div>
-                        <h1 className="text-2xl font-bold mb-4">Чат</h1>
-                        <p>Раздел чата находится в разработке.</p>
-                    </div>
-                )}
-
-                {activeSection === 'settings' && (
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h1 className="text-2xl font-bold mb-4">Настройки</h1>
-                        {!showPersonalForm ? (
+        {activeSection === 'settings' && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h1 className="text-2xl font-bold mb-4">Настройки</h1>
+            {!showPersonalForm ? (
                             <ul className="divide-y">
                                 <li
                                     className="py-3 flex items-center cursor-pointer hover:bg-gray-50"
@@ -416,9 +433,9 @@ onApply={(credit) => {
                                 </div>
                             </div>
                         )}
-                    </div>
-                )}
-            </main>
-        </div>
-    );
+          </div>
+        )}
+      </main>
+    </div>
+  );
 }

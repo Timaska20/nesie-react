@@ -70,6 +70,40 @@ export default function CreditList({ credits, onApply }) {
             alert('Ошибка объяснения. Проверьте консоль.');
         }
     };
+const handleApply = async (credit) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        alert('Вы не авторизованы');
+        return;
+    }
+
+    try {
+        await axios.post(
+            '/api/credits/',
+            {
+                loan_amount: credit.loan_amnt_kzt,
+                interest_rate: credit.loan_int_rate ?? 15.0,
+                term_months: 12,
+                loan_intent: credit.loan_intent,
+                loan_grade: credit.loan_grade,
+                loan_status: credit.loan_status
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        alert('Заявка успешно подана');
+        setSelectedCredit(credit);
+        onApply?.(credit);
+    } catch (error) {
+        console.error('Ошибка при подаче заявки:', error.response?.data || error.message);
+        alert('Ошибка при отправке на сервер');
+    }
+};
 
     const renderExplanationTable = (explanation, credit) => {
         const shapEntries = Object.entries(explanation.shap_explanation);
@@ -152,12 +186,7 @@ export default function CreditList({ credits, onApply }) {
                         </p>
                         <button
                             className="bg-green-600 text-white px-4 py-2 rounded-lg"
-                                         onClick={() => {
-               // сохраняем кредит в контексте
-               setSelectedCredit(credit);
-               // вызываем родительский коллбэк, чтобы вернуться на главную
-               onApply?.(credit);
-            }}
+                            onClick={() => handleApply(credit)}
                         >
                             Подать заявку
                         </button>
