@@ -2,6 +2,7 @@
 import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { CreditContext } from '../context/CreditContext';
+import SHA256 from "crypto-js/sha256";
 
 const FEATURE_TRANSLATIONS = {
     "person_age": "Возраст",
@@ -39,11 +40,15 @@ export default function CreditList({ credits, onApply }) {
     const [explanations, setExplanations] = useState({});
     const { setSelectedCredit } = useContext(CreditContext);
 
+
+
     const handleExplainClick = async (credit, index) => {
         if (explanations[index]) {
             setExplanations(prev => ({ ...prev, [index]: null }));
             return;
         }
+
+
 
         const token = localStorage.getItem('token');
         if (!token) {
@@ -70,12 +75,27 @@ export default function CreditList({ credits, onApply }) {
             alert('Ошибка объяснения. Проверьте консоль.');
         }
     };
+    const generateCreditHash = (credit) => {
+    const raw = `${credit.loan_amnt_kzt}:${credit.loan_int_rate ?? 15.0}:${12}:${credit.loan_intent}:${credit.loan_grade}`;
+    return SHA256(raw).toString();
+};
 const handleApply = async (credit) => {
     const token = localStorage.getItem('token');
     if (!token) {
         alert('Вы не авторизованы');
         return;
     }
+
+    const hash = generateCreditHash(credit);
+    console.log("Отправка кредита:", {
+    loan_amount: credit.loan_amnt_kzt,
+    interest_rate: credit.loan_int_rate ?? 15.0,
+    term_months: 12,
+    loan_intent: credit.loan_intent,
+    loan_grade: credit.loan_grade,
+    loan_status: credit.loan_status,
+    hash: generateCreditHash(credit)
+});
 
     try {
         await axios.post(
@@ -86,7 +106,8 @@ const handleApply = async (credit) => {
                 term_months: 12,
                 loan_intent: credit.loan_intent,
                 loan_grade: credit.loan_grade,
-                loan_status: credit.loan_status
+                loan_status: credit.loan_status,
+                hash: hash
             },
             {
                 headers: {
@@ -104,6 +125,7 @@ const handleApply = async (credit) => {
         alert('Ошибка при отправке на сервер');
     }
 };
+
 
     const renderExplanationTable = (explanation, credit) => {
         const shapEntries = Object.entries(explanation.shap_explanation);
