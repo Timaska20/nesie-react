@@ -1,31 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
+import { CreditContext } from '../context/CreditContext';
 import axios from 'axios';
 import {
-    FaMoneyBill,
-    FaCreditCard,
-    FaPiggyBank,
-    FaUniversity,
-    FaHome,
-    FaComments,
-    FaCog,
-    FaBell,
-    FaUser,
-    FaEnvelope,
-    FaLock
+  FaMoneyBill,
+  FaCreditCard,
+  FaPiggyBank,
+  FaUniversity,
+  FaHome,
+  FaComments,
+  FaCog,
+  FaBell,
+  FaUser,
+  FaEnvelope,
+  FaLock
 } from 'react-icons/fa';
 import { MdAttachMoney } from 'react-icons/md';
 import CreditList from './CreditList';
 
 export default function DesktopHomePage() {
     const [rates, setRates] = useState({
-        eur: { buy: '—', sell: '—' },
-        rub: { buy: '—', sell: '—' },
-        usd: { buy: '—', sell: '—' },
+        eur: { buy: 0, sell: 0 },
+        rub: { buy: 0, sell: 0 },
+        usd: { buy: 0, sell: 0 }
     });
-
+    const [credits, setCredits] = useState([]);
     const [activeSection, setActiveSection] = useState('home');
     const [showPersonalForm, setShowPersonalForm] = useState(false);
-    const [credits, setCredits] = useState([]);
     const [formData, setFormData] = useState({
         person_age: '',
         person_income: '',
@@ -110,6 +110,7 @@ export default function DesktopHomePage() {
         }
     };
 
+    const { selectedCredit, setSelectedCredit } = useContext(CreditContext);
     // Обработчик кнопки "Получить кредит" с загрузкой
     const handleGetCredit = async () => {
         try {
@@ -199,12 +200,13 @@ export default function DesktopHomePage() {
 )}
 
 
-                {activeSection === 'home' && (
-                    <>
-                        <div className="flex justify-between items-center mb-6">
-                            <h1 className="text-2xl font-bold">Главная</h1>
-                            <FaBell className="text-green-600 w-6 h-6" />
-                        </div>
+            {activeSection === 'home' && (
+                <>
+                    <div className="flex justify-between items-center mb-6">
+                        <h1 className="text-2xl font-bold">Главная</h1>
+                        <FaBell className="text-green-600 w-6 h-6" />
+                    </div>
+
 
                         <div className="bg-white rounded-lg shadow p-6 mb-6">
                             <div className="flex items-center space-x-2 mb-4">
@@ -262,9 +264,41 @@ export default function DesktopHomePage() {
                     </>
                 )}
 
-                {activeSection === 'credits' && (
-                    <CreditList credits={credits} />
-                )}
+<div className="bg-white rounded-lg shadow p-6 mb-6">
+  <h2 className="text-lg font-semibold mb-4">Продукты</h2>
+
+  {selectedCredit ? (
+    <div className="flex items-center space-x-4 p-4 border border-yellow-300 bg-yellow-50 rounded-lg shadow-sm hover:shadow-md transition">
+      <div className="text-yellow-500 text-3xl">
+        📁
+      </div>
+      <div className="flex-1">
+        <h3 className="text-md font-semibold text-gray-800 mb-1">Кредит по заявке</h3>
+        <p className="text-sm text-gray-600">
+          <strong>Сумма:</strong> {selectedCredit.loan_amnt_kzt.toLocaleString()} ₸
+        </p>
+        <p className="text-sm text-gray-600">
+          <strong>Цель:</strong> {selectedCredit.loan_intent}
+        </p>
+        <p className="text-sm text-gray-600">
+          <strong>Класс:</strong> {selectedCredit.loan_grade} | <strong>Ставка:</strong> {selectedCredit.loan_int_rate}%
+        </p>
+      </div>
+    </div>
+  ) : (
+    <p className="text-gray-500">Нет активных продуктов</p>
+  )}
+</div>
+
+            {activeSection === 'credits' && (
+                     <CreditList
+       credits={credits}
+onApply={(credit) => {
+          setSelectedCredit(credit);
+         setActiveSection('home');
+       }}
+     />
+            )}
 
                 {activeSection === 'chat' && (
                     <div>

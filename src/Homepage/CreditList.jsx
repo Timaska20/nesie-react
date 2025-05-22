@@ -1,6 +1,7 @@
 // CreditList.jsx — исправленная интерпретация SHAP по label
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import axios from 'axios';
+import { CreditContext } from '../context/CreditContext';
 
 const FEATURE_TRANSLATIONS = {
     "person_age": "Возраст",
@@ -34,8 +35,9 @@ const FEATURE_TRANSLATIONS = {
     "adjusted_age": "Коррект. возраст"
 };
 
-export default function CreditList({ credits }) {
+export default function CreditList({ credits, onApply }) {
     const [explanations, setExplanations] = useState({});
+    const { setSelectedCredit } = useContext(CreditContext);
 
     const handleExplainClick = async (credit, index) => {
         if (explanations[index]) {
@@ -43,7 +45,6 @@ export default function CreditList({ credits }) {
             return;
         }
 
-        // Получаем токен из localStorage
         const token = localStorage.getItem('token');
         if (!token) {
             alert('Токен не найден. Пожалуйста, войдите.');
@@ -51,29 +52,27 @@ export default function CreditList({ credits }) {
         }
 
         try {
-           const response = await axios.post(
-  '/api/predict/?explain=true',
-  {
-      loan_intent: credit.loan_intent,
-      loan_grade: credit.loan_grade,
-      loan_amount: credit.loan_amnt_kzt,  // <-- здесь меняем
-      loan_int_rate: credit.loan_int_rate ?? 15.0,
-      loan_status: credit.loan_status,
-      currency: 'KZT'
-  },
-  { headers: { Authorization: `Bearer ${token}` } }
-);
-
+            const response = await axios.post(
+                '/api/predict/?explain=true',
+                {
+                    loan_intent: credit.loan_intent,
+                    loan_grade: credit.loan_grade,
+                    loan_amount: credit.loan_amnt_kzt,
+                    loan_int_rate: credit.loan_int_rate ?? 15.0,
+                    loan_status: credit.loan_status,
+                    currency: 'KZT'
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
             setExplanations(prev => ({ ...prev, [index]: response.data }));
         } catch (error) {
-            console.error('Ошибка при получении объяснения:', error);
-            alert('Не удалось загрузить объяснение модели');
+            console.error('Ошибка объяснения:', error.response?.data || error.message);
+            alert('Ошибка объяснения. Проверьте консоль.');
         }
     };
 
     const renderExplanationTable = (explanation, credit) => {
         const shapEntries = Object.entries(explanation.shap_explanation);
-
         const currentIntentKey = `loan_intent_${credit.loan_intent}`;
         const currentGradeKey = `loan_grade_${credit.loan_grade}`;
         const currentHousingKey = `person_home_ownership_${credit.client_prediction.client_person_home_ownership}`;
@@ -95,15 +94,13 @@ export default function CreditList({ credits }) {
             .sort(([, a], [, b]) => Math.abs(b) - Math.abs(a))
             .slice(0, 5);
 
-        const label = explanation.prediction_label;
+        const increaseText = credit.client_prediction.prediction_score
+            ? "Увеличивают шанс одобрения:"
+            : "Увеличивают риск — увеличивают шанс отказа:";
 
-        const decreaseText = label === 1
-            ? "Увеличивают риск дефолта:"
-            : "Снижают риск — способствуют одобрению:";
-
-        const increaseText = label === 1
-            ? "Снижают риск дефолта:"
-            : "Увеличивают риск — уменьшают шанс одобрения:";
+        const decreaseText = credit.client_prediction.prediction_score
+            ? "Уменьшают шанс одобрения:"
+            : "Уменьшают риск — уменьшают шанс отказа:";
 
         return (
             <div className="mt-2 border border-green-200 rounded-lg bg-green-50 p-3 text-sm text-gray-800">
@@ -155,7 +152,12 @@ export default function CreditList({ credits }) {
                         </p>
                         <button
                             className="bg-green-600 text-white px-4 py-2 rounded-lg"
-                            onClick={() => alert(`Заявка на кредит на сумму ${credit.loan_amnt_kzt.toLocaleString()} ₸ отправлена!`)}
+                                         onClick={() => {
+               // сохраняем кредит в контексте
+               setSelectedCredit(credit);
+               // вызываем родительский коллбэк, чтобы вернуться на главную
+               onApply?.(credit);
+            }}
                         >
                             Подать заявку
                         </button>
