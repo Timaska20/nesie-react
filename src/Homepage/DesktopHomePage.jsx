@@ -43,7 +43,11 @@ export default function DesktopHomePage() {
     const [isLoading, setIsLoading] = useState(false);
     const [emailConfirmed, setEmailConfirmed] = useState(true);
     const [userEmail, setUserEmail] = useState('');
+    const [personalDataLoaded, setPersonalDataLoaded] = useState(false);
     const { selectedCredit, setSelectedCredit } = useContext(CreditContext);
+
+  const isDataFilled = formData.person_age && formData.person_income && formData.person_home_ownership && formData.person_emp_length;
+  const isLocked = !emailConfirmed || !isDataFilled;
 
        useEffect(() => {
         axios.get('/api/email-status/', {
@@ -89,7 +93,6 @@ export default function DesktopHomePage() {
 
 
     useEffect(() => {
-        if (activeSection === 'settings' && showPersonalForm) {
             const token = localStorage.getItem('token');
             if (token) {
                 axios.get('/api/personal-data/', {
@@ -110,13 +113,12 @@ export default function DesktopHomePage() {
                             });
                             setHasData(false);
                             setIsEditable(true);
-                        } else {
-                            console.error('Ошибка при загрузке персональных данных:', error);
+                            setActiveSection('settings');
+                            setShowPersonalForm(true);
                         }
                     });
             }
-        }
-    }, [activeSection, showPersonalForm]);
+    }, [activeSection]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -183,7 +185,6 @@ export default function DesktopHomePage() {
         }
     };
 
-        const isLocked = !emailConfirmed;
        const navItem = (section, icon, label) => (
         <div
             className={`flex items-center space-x-2 cursor-pointer ${activeSection === section ? 'text-green-600' : 'text-gray-600 hover:text-green-600'} ${isLocked && section !== 'settings' ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -211,7 +212,13 @@ export default function DesktopHomePage() {
       <main className="flex-1 p-8">
                 {!emailConfirmed && (
                     <div className="mb-4 p-4 bg-red-100 text-red-800 border border-red-300 rounded">
-                        Вы не подтвердили адрес электронной почты <strong>{userEmail}</strong>. Подтвердите, чтобы продолжить использование системы.
+            Вы не подтвердили адрес электронной почты <strong>{userEmail}</strong>. Подтвердите, чтобы продолжить использование системы.
+                    </div>
+                )}
+
+        {!isDataFilled && (
+                    <div className="mb-4 p-4 bg-red-100 text-red-800 border border-red-300 rounded">
+            Пожалуйста, заполните ваши персональные данные, чтобы продолжить работу.
           </div>
         )}
 
@@ -350,7 +357,7 @@ export default function DesktopHomePage() {
       <ul className="divide-y">
                                 <li className={`py-3 flex items-center ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}
           onClick={() => {
-                                        if (isLocked) return;
+              if (isLocked) return;
             setShowPersonalForm(true);
             setShowEmailForm(false);
             setShowPasswordForm(false);
