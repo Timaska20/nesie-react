@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // ✅ добавили useNavigate
+import { Link, useNavigate} from 'react-router-dom';
 import axios from 'axios';
 
 export default function RegisterPage() {
@@ -42,14 +42,12 @@ export default function RegisterPage() {
             const params = new URLSearchParams();
             params.append('username', form.username);
             params.append('password', form.password);
+            params.append('email', form.email);
 
             const response = await axios.post('/api/register/', params);
             console.log('Регистрация успешна:', response.data);
 
-            // ✅ сохраняем токен в localStorage
             localStorage.setItem('token', response.data.access_token);
-
-            // ✅ редиректим на HomePage
             navigate('/home');
         } catch (error) {
             console.error('Ошибка регистрации:', error.response?.data || error.message);
@@ -146,3 +144,4 @@ export default function RegisterPage() {
         </div>
     );
 }
+``

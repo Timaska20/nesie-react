@@ -16,6 +16,9 @@ import {
 } from 'react-icons/fa';
 import { MdAttachMoney } from 'react-icons/md';
 import CreditList from './CreditList';
+import EmailUpdateForm from './EmailUpdateForm';
+import PasswordUpdateForm from './PasswordUpdateForm';
+import PersonalDataForm from './PersonalDataForm'; // ✅ импортируем компонент
 
 export default function DesktopHomePage() {
     const [rates, setRates] = useState({
@@ -27,6 +30,8 @@ export default function DesktopHomePage() {
     const [submittedCredits, setSubmittedCredits] = useState([]);
     const [activeSection, setActiveSection] = useState('home');
     const [showPersonalForm, setShowPersonalForm] = useState(false);
+    const [showEmailForm, setShowEmailForm] = useState(false);
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [formData, setFormData] = useState({
         person_age: '',
         person_income: '',
@@ -43,7 +48,7 @@ export default function DesktopHomePage() {
                 setRates({
                     eur: response.data.eur,
                     rub: response.data.rub,
-                    usd: response.data.usd,
+                    usd: response.data.usd
                 });
             })
             .catch((error) => {
@@ -123,11 +128,10 @@ export default function DesktopHomePage() {
     };
 
     const { selectedCredit, setSelectedCredit } = useContext(CreditContext);
-    // Обработчик кнопки "Получить кредит" с загрузкой
+
     const handleGetCredit = async () => {
         try {
-            setIsLoading(true);  // Показать загрузку
-
+            setIsLoading(true);
             const token = localStorage.getItem('token');
             if (!token) {
                 alert('Ошибка: токен не найден. Пожалуйста, войдите заново.');
@@ -147,7 +151,7 @@ export default function DesktopHomePage() {
 
             if (creditResponse.data && creditResponse.data.credits) {
                 setCredits(creditResponse.data.credits);
-                setActiveSection('credits');  // Переключаем на список кредитов
+        setActiveSection('credits');
             } else {
                 alert('Кредиты не найдены.');
             }
@@ -155,7 +159,7 @@ export default function DesktopHomePage() {
             console.error('Ошибка при получении кредитов:', error.response?.data || error.message);
             alert('Ошибка при получении кредитов.');
         } finally {
-            setIsLoading(false);  // Скрыть загрузку
+      setIsLoading(false);
         }
     };
 
@@ -210,9 +214,10 @@ export default function DesktopHomePage() {
             </div>
           </div>
         )}
+          {activeSection === 'settings' && showEmailForm && <EmailUpdateForm onClose={() => setShowEmailForm(false)} />}
+           {activeSection === 'settings' && showPasswordForm && <PasswordUpdateForm onClose={() => setShowPasswordForm(false)} />}
 
-
-{activeSection === 'home' && (
+            {activeSection === 'home' && (
     <>
         <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">Главная</h1>
@@ -324,117 +329,58 @@ export default function DesktopHomePage() {
           </div>
         )}
 
-        {activeSection === 'settings' && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h1 className="text-2xl font-bold mb-4">Настройки</h1>
-            {!showPersonalForm ? (
-                            <ul className="divide-y">
-                                <li
-                                    className="py-3 flex items-center cursor-pointer hover:bg-gray-50"
-                                    onClick={() => setShowPersonalForm(true)}
-                                >
-                                    <FaUser className="w-5 h-5 text-gray-500 mr-3" />
-                                    Личные данные
-                                </li>
-                                <li className="py-3 flex items-center">
-                                    <FaEnvelope className="w-5 h-5 text-gray-500 mr-3" />
-                                    Изменить e-mail
-                                </li>
-                                <li className="py-3 flex items-center">
-                                    <FaLock className="w-5 h-5 text-gray-500 mr-3" />
-                                    Изменить пароль
-                                </li>
-                            </ul>
-                        ) : (
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block mb-1 text-sm font-medium">Возраст</label>
-                                    <input
-                                        type="number"
-                                        name="person_age"
-                                        value={formData.person_age}
-                                        onChange={handleInputChange}
-                                        className="w-full border border-gray-300 rounded px-3 py-2"
-                                        placeholder="Введите возраст"
-                                        required
-                                        disabled={!isEditable}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block mb-1 text-sm font-medium">Доход</label>
-                                    <input
-                                        type="number"
-                                        name="person_income"
-                                        value={formData.person_income}
-                                        onChange={handleInputChange}
-                                        className="w-full border border-gray-300 rounded px-3 py-2"
-                                        placeholder="Введите доход"
-                                        required
-                                        disabled={!isEditable}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block mb-1 text-sm font-medium">Тип жилья</label>
-                                    <select
-                                        name="person_home_ownership"
-                                        value={formData.person_home_ownership}
-                                        onChange={handleInputChange}
-                                        className="w-full border border-gray-300 rounded px-3 py-2"
-                                        required
-                                        disabled={!isEditable}
-                                    >
-                                        <option value="">Выберите</option>
-                                        <option value="RENT">RENT — арендует жильё</option>
-                                        <option value="OWN">OWN — владеет жильём полностью</option>
-                                        <option value="MORTGAGE">MORTGAGE — жильё в ипотеке</option>
-                                        <option value="OTHER">OTHER — другое</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block mb-1 text-sm font-medium">Стаж работы (лет)</label>
-                                    <input
-                                        type="number"
-                                        name="person_emp_length"
-                                        value={formData.person_emp_length}
-                                        onChange={handleInputChange}
-                                        className="w-full border border-gray-300 rounded px-3 py-2"
-                                        placeholder="Введите стаж"
-                                        required
-                                        disabled={!isEditable}
-                                    />
-                                </div>
-                                <div className="flex space-x-2">
-                                    {!isEditable ? (
-                                        <button
-                                            type="button"
-                                            className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
-                                            onClick={() => setIsEditable(true)}
-                                        >
-                                            Изменить
-                                        </button>
-                                    ) : (
-                                        <>
-                                            <button
-                                                type="button"
-                                                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                                                onClick={handleSubmit}
-                                            >
-                                                Сохранить
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-                                                onClick={() => setShowPersonalForm(false)}
-                                            >
-                                                Назад
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-          </div>
-        )}
+{activeSection === 'settings' && (
+  <div className="bg-white rounded-lg shadow p-6">
+    <h1 className="text-2xl font-bold mb-4">Настройки</h1>
+
+    {showPersonalForm ? (
+      <PersonalDataForm
+        formData={formData}
+        isEditable={isEditable}
+        onChange={handleInputChange}
+        onSubmit={handleSubmit}
+        onEdit={() => setIsEditable(true)}
+        onCancel={() => setShowPersonalForm(false)}
+      />
+    ) : (
+      <ul className="divide-y">
+        <li
+          className="py-3 flex items-center cursor-pointer hover:bg-gray-50"
+          onClick={() => {
+            setShowPersonalForm(true);
+            setShowEmailForm(false);
+            setShowPasswordForm(false);
+          }}
+        >
+          <FaUser className="w-5 h-5 text-gray-500 mr-3" />
+          Личные данные
+        </li>
+        <li
+          className="py-3 flex items-center cursor-pointer hover:bg-gray-50"
+          onClick={() => {
+            setShowEmailForm(true);
+            setShowPersonalForm(false);
+            setShowPasswordForm(false);
+          }}
+        >
+          <FaEnvelope className="w-5 h-5 text-gray-500 mr-3" />
+          Изменить e-mail
+        </li>
+        <li
+          className="py-3 flex items-center cursor-pointer hover:bg-gray-50"
+          onClick={() => {
+            setShowPasswordForm(true);
+            setShowPersonalForm(false);
+            setShowEmailForm(false);
+          }}
+        >
+          <FaLock className="w-5 h-5 text-gray-500 mr-3" />
+          Изменить пароль
+        </li>
+      </ul>
+    )}
+  </div>
+)}
       </main>
     </div>
   );
