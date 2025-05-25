@@ -18,7 +18,7 @@ import { MdAttachMoney } from 'react-icons/md';
 import CreditList from './CreditList';
 import EmailUpdateForm from './EmailUpdateForm';
 import PasswordUpdateForm from './PasswordUpdateForm';
-import PersonalDataForm from './PersonalDataForm'; // ✅ импортируем компонент
+import PersonalDataForm from './PersonalDataForm';
 
 export default function DesktopHomePage() {
     const [rates, setRates] = useState({
@@ -41,6 +41,25 @@ export default function DesktopHomePage() {
     const [hasData, setHasData] = useState(false);
     const [isEditable, setIsEditable] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
+    const [emailConfirmed, setEmailConfirmed] = useState(true);
+    const [userEmail, setUserEmail] = useState('');
+    const { selectedCredit, setSelectedCredit } = useContext(CreditContext);
+
+       useEffect(() => {
+        axios.get('/api/email-status/', {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }).then((response) => {
+            setEmailConfirmed(response.data.email_confirmed);
+            setUserEmail(response.data.email);
+            if (!response.data.email_confirmed) {
+                setActiveSection('settings');
+                setShowEmailForm(true);
+                setShowPersonalForm(false);
+                setShowPasswordForm(false);
+            }
+        }).catch(() => {});
+    }, []);
+
 
     useEffect(() => {
         axios.get('/api/currency-rates/')
@@ -66,6 +85,8 @@ export default function DesktopHomePage() {
             });
         }
     }, []);
+
+
 
     useEffect(() => {
         if (activeSection === 'settings' && showPersonalForm) {
@@ -127,7 +148,6 @@ export default function DesktopHomePage() {
         }
     };
 
-    const { selectedCredit, setSelectedCredit } = useContext(CreditContext);
 
     const handleGetCredit = async () => {
         try {
@@ -163,58 +183,39 @@ export default function DesktopHomePage() {
         }
     };
 
+        const isLocked = !emailConfirmed;
+       const navItem = (section, icon, label) => (
+        <div
+            className={`flex items-center space-x-2 cursor-pointer ${activeSection === section ? 'text-green-600' : 'text-gray-600 hover:text-green-600'} ${isLocked && section !== 'settings' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            onClick={() => {
+                if (isLocked && section !== 'settings') return;
+                setActiveSection(section);
+                setShowPersonalForm(false);
+            }}
+        >
+            {icon}
+            <span>{label}</span>
+        </div>
+    );
     return (
         <div className="flex min-h-screen bg-gray-50 relative">
             <aside className="w-64 bg-white shadow-lg p-4">
                 <h2 className="text-xl font-bold mb-6">Панель</h2>
                 <nav className="space-y-4">
-                    <div
-                        className={`flex items-center space-x-2 cursor-pointer ${activeSection === 'home' ? 'text-green-600' : 'text-gray-600 hover:text-green-600'}`}
-                        onClick={() => {
-                            setActiveSection('home');
-                            setShowPersonalForm(false);
-                        }}
-                    >
-                        <FaHome className="w-5 h-5" />
-                        <span>Главная</span>
-                    </div>
-                    <div
-                        className={`flex items-center space-x-2 cursor-pointer ${activeSection === 'chat' ? 'text-green-600' : 'text-gray-600 hover:text-green-600'}`}
-                        onClick={() => {
-                            setActiveSection('chat');
-                            setShowPersonalForm(false);
-                        }}
-                    >
-                        <FaComments className="w-5 h-5" />
-                        <span>Чат</span>
-                    </div>
-                    <div
-                        className={`flex items-center space-x-2 cursor-pointer ${activeSection === 'settings' ? 'text-green-600' : 'text-gray-600 hover:text-green-600'}`}
-                        onClick={() => {
-                            setActiveSection('settings');
-                            setShowPersonalForm(false);
-                        }}
-                    >
-                        <FaCog className="w-5 h-5" />
-                        <span>Настройки</span>
-                    </div>
+                    {navItem('home', <FaHome className="w-5 h-5" />, 'Главная')}
+                    {navItem('chat', <FaComments className="w-5 h-5" />, 'Чат')}
+                    {navItem('settings', <FaCog className="w-5 h-5" />, 'Настройки')}
                 </nav>
             </aside>
 
       <main className="flex-1 p-8">
-        {isLoading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <div className="flex space-x-2 justify-center items-center">
-                <div className="h-4 w-4 bg-green-500 rounded-full animate-bounce"></div>
-                <div className="h-4 w-4 bg-green-500 rounded-full animate-bounce [animation-delay:-0.2s]"></div>
-                <div className="h-4 w-4 bg-green-500 rounded-full animate-bounce [animation-delay:-0.4s]"></div>
-              </div>
-              <p className="text-lg font-semibold mt-4">Рассмотрение заявки...</p>
-            </div>
+                {!emailConfirmed && (
+                    <div className="mb-4 p-4 bg-red-100 text-red-800 border border-red-300 rounded">
+                        Вы не подтвердили адрес электронной почты <strong>{userEmail}</strong>. Подтвердите, чтобы продолжить использование системы.
           </div>
         )}
-          {activeSection === 'settings' && showEmailForm && <EmailUpdateForm onClose={() => setShowEmailForm(false)} />}
+
+          {activeSection === 'settings' && showEmailForm && <EmailUpdateForm onClose={() => {}} />}
            {activeSection === 'settings' && showPasswordForm && <PasswordUpdateForm onClose={() => setShowPasswordForm(false)} />}
 
             {activeSection === 'home' && (
@@ -337,16 +338,19 @@ export default function DesktopHomePage() {
       <PersonalDataForm
         formData={formData}
         isEditable={isEditable}
-        onChange={handleInputChange}
+                                onChange={(e) => {
+                                    const { name, value } = e.target;
+                                    setFormData((prev) => ({ ...prev, [name]: value }));
+                                }}
         onSubmit={handleSubmit}
         onEdit={() => setIsEditable(true)}
         onCancel={() => setShowPersonalForm(false)}
       />
     ) : (
       <ul className="divide-y">
-        <li
-          className="py-3 flex items-center cursor-pointer hover:bg-gray-50"
+                                <li className={`py-3 flex items-center ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}
           onClick={() => {
+                                        if (isLocked) return;
             setShowPersonalForm(true);
             setShowEmailForm(false);
             setShowPasswordForm(false);
@@ -366,9 +370,9 @@ export default function DesktopHomePage() {
           <FaEnvelope className="w-5 h-5 text-gray-500 mr-3" />
           Изменить e-mail
         </li>
-        <li
-          className="py-3 flex items-center cursor-pointer hover:bg-gray-50"
+                                <li className={`py-3 flex items-center ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}
           onClick={() => {
+                                        if (isLocked) return;
             setShowPasswordForm(true);
             setShowPersonalForm(false);
             setShowEmailForm(false);
